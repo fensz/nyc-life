@@ -87,7 +87,7 @@ export default class ResultScene extends Phaser.Scene {
         this.tweens.add({ targets: scoreText, scale: 1.15, duration: 140, yoyo: true });
       },
     });
-    txt(this, 522, 364, 'Score is re-computed on-chain', 16, HEX.cream, { bold: false, strokeThickness: 3 });
+    txt(this, 522, 364, busState.chainMode === 'program' ? 'Score is re-computed on-chain' : 'Recording needs free Devnet SOL (faucet.solana.com)', 16, HEX.cream, { bold: false, strokeThickness: 3 });
     if (story) {
       txt(this, 522, 386, `Story: ${story.points} pts, ${story.done}/${story.total} steps (not on-chain)`, 16, HEX.energy, { bold: false, strokeThickness: 3 });
     }
@@ -124,7 +124,7 @@ export default class ResultScene extends Phaser.Scene {
       button(WIDTH / 2, 'PLAY AGAIN  [R]', C.navyLight, playAgain);
     }
 
-    this.status = txt(this, WIDTH / 2, 508, busState.chainEnabled ? 'Connect a Solana wallet to save this day on Devnet' : '', 18, HEX.cream, {
+    this.status = txt(this, WIDTH / 2, 508, busState.chainEnabled ? 'Fund your wallet with free Devnet SOL first: faucet.solana.com' : '', 18, HEX.cream, {
       origin: 0.5, strokeThickness: 3, align: 'center',
     });
 

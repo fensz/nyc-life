@@ -8,6 +8,7 @@ export const bus = new Phaser.Events.EventEmitter();
 // Last known values so late subscribers (scenes that start later) can read them.
 export const busState = {
   chainEnabled: false,
+  chainMode: 'memo', // 'program' (Anchor program scores it) or 'memo' (day saved with the Memo program)
   chainStats: null,
   lastStatus: null,
 };

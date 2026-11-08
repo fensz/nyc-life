@@ -4,10 +4,10 @@ import './globals.css';
 export const metadata = {
   title: 'NYC LIFE: One Day in New York',
   description:
-    'A tiny New York life sim. Three choices, one day, and your score is verified on Solana Devnet.',
+    'A tiny New York life sim. Three choices, one day, and your day is saved on Solana Devnet.',
   openGraph: {
     title: 'NYC LIFE: One Day in New York',
-    description: 'Three choices. One day. Verified on Solana.',
+    description: 'Three choices. One day. Saved on Solana.',
     type: 'website',
   },
 };

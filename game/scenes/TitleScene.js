@@ -39,7 +39,7 @@ export default class TitleScene extends Phaser.Scene {
       this,
       WIDTH / 2,
       258,
-      'You just moved here with $20.\nThree choices. One day. Your score is verified on Solana.',
+      'You just moved here with $20.\nThree choices. One day. Your day is saved on Solana.',
       20,
       HEX.cream,
       { origin: 0.5, align: 'center', bold: false, strokeThickness: 3 }

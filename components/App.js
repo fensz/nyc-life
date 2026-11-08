@@ -7,10 +7,11 @@ import ChainPanel from './ChainPanel';
 import RotateHint from './RotateHint';
 import { Hero, HowItWorks, Footer } from './SiteSections';
 import { busState } from '@/game/bus';
-import { CHAIN_ENABLED } from '@/solana/constants';
+import { CHAIN_ENABLED, CHAIN_MODE } from '@/solana/constants';
 
 if (typeof window !== 'undefined' && !window.Buffer) window.Buffer = Buffer;
 busState.chainEnabled = CHAIN_ENABLED;
+busState.chainMode = CHAIN_MODE;
 
 export default function App() {
   return (

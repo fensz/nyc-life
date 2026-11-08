@@ -30,7 +30,7 @@ const VOICES = {
   pete: 'pqHfZKP75CvOlQylNhV4', // Bill
 };
 const PEOPLE = Object.keys(VOICES).filter((v) => v !== 'narrator');
-const MODEL = 'eleven_turbo_v2_5'; // Turbo v2.5: higher quality than Flash, same 0.5 credit per character
+const MODEL = 'eleven_v4'; // Eleven v4: ElevenLabs' newest, highest-quality text-to-speech model
 
 // ---- the list of lines to record ----
 const wanted = new Map(); // key -> { voice, text }

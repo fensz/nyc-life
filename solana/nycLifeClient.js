@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer';
 import { PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
-import { PROGRAM_ID } from './constants';
+import { PROGRAM_ID, MEMO_PROGRAM_ID } from './constants';
 import { PLAYER_SEED, encodeInitPlayer, encodeSubmitDay, decodePlayerStats } from './encoding';
 
 export function findPlayerPda(owner, programId = PROGRAM_ID) {
@@ -70,6 +70,33 @@ export async function recordDay({ connection, publicKey, sendTransaction, action
   return { signature, pda, stats, initialized: !existing };
 }
 
+// Memo mode: no custom program needed. Writes the finished day to Solana Devnet using the built-in Memo
+// program, signed by the player's wallet. `score` is the game's own score for the day.
+export function memoText(actions, score) {
+  return `NYC LIFE v1 | actions=${actions.join(',')} | score=${score}`;
+}
+
+export async function recordDayMemo({ connection, publicKey, sendTransaction, actions, score, onStage }) {
+  const tx = new Transaction().add(
+    new TransactionInstruction({
+      programId: MEMO_PROGRAM_ID,
+      keys: [{ pubkey: publicKey, isSigner: true, isWritable: false }],
+      data: Buffer.from(memoText(actions, score), 'utf8'),
+    })
+  );
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+  tx.recentBlockhash = blockhash;
+  tx.feePayer = publicKey;
+
+  onStage?.('signing');
+  const signature = await sendTransaction(tx, connection);
+
+  onStage?.('confirming');
+  const conf = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+  if (conf.value.err) throw new Error(`Transaction failed: ${JSON.stringify(conf.value.err)}`);
+  return { signature, memo: memoText(actions, score) };
+}
+
 // Turn wallet / RPC errors into short, human messages.
 export function friendlyError(err) {
   const msg = String(err?.message || err || 'Unknown error');
@@ -80,6 +107,7 @@ export function friendlyError(err) {
   }
   const progLog = [...logs].reverse().find((l) => /Program log: (AnchorError|Error)/.test(l));
   if (progLog) return progLog.replace('Program log: ', '');
+  if (/airdrop|faucet|410|429|rate limit/i.test(msg)) return 'Get free Devnet SOL at faucet.solana.com, then try again';
   if (/blockhash|expired/i.test(msg)) return 'Network was slow. Please try again';
   return msg.length > 140 ? msg.slice(0, 140) + '…' : msg;
 }
