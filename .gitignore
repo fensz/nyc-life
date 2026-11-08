@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.env*.local
+.env
+*.keypair.json
+*-keypair.json
+id.json
+.vercel
+npm-debug.log*
+.DS_Store
