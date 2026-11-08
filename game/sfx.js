@@ -17,6 +17,10 @@ export function setMuted(m) {
   muted = m;
 }
 
+export function isMuted() {
+  return muted;
+}
+
 export function tone(freq = 440, dur = 0.08, type = 'square', vol = 0.05, delay = 0) {
   if (muted) return;
   const ac = getCtx();

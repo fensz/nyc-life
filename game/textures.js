@@ -14,9 +14,18 @@ function px(g, color, x, y, w = 1, h = 1) {
   g.fillRect(x, y, w, h);
 }
 
-function drawPlayer(g, frame) {
-  const hair = 0x2b1d14, skin = 0xf1c27d, eye = C.navy;
-  const hoodie = 0x2a9d8f, hoodieDark = 0x21867a, jeans = 0x3d5a80, shoe = C.white;
+const PLAYER_LOOK = { hair: 0x2b1d14, skin: 0xf1c27d, top: 0x2a9d8f, jeans: 0x3d5a80 };
+
+function shade(color, f) {
+  const r = Math.round(((color >> 16) & 255) * f);
+  const gr = Math.round(((color >> 8) & 255) * f);
+  const b = Math.round((color & 255) * f);
+  return (r << 16) | (gr << 8) | b;
+}
+
+function drawPlayer(g, frame, look = PLAYER_LOOK) {
+  const hair = look.hair, skin = look.skin, eye = C.navy;
+  const hoodie = look.top, hoodieDark = shade(look.top, 0.8), jeans = look.jeans, shoe = C.white;
   px(g, hair, 4, 0, 8, 3);
   px(g, hair, 3, 1, 1, 4);
   px(g, hair, 12, 1, 1, 4);
@@ -24,6 +33,10 @@ function drawPlayer(g, frame) {
   px(g, eye, 6, 5, 1, 2);
   px(g, eye, 9, 5, 1, 2);
   px(g, 0xd99a5b, 7, 7, 2, 1); // mouth
+  if (look.hat) {
+    px(g, look.hat, 3, 0, 10, 3);
+    px(g, look.hat, 2, 3, 12, 1); // brim
+  }
   px(g, hoodie, 3, 9, 10, 8);
   px(g, hoodieDark, 7, 10, 2, 7);
   px(g, hoodie, 1, 10, 2, 6);
@@ -40,6 +53,29 @@ function drawPlayer(g, frame) {
     px(g, jeans, 10, 17, 3, 4);
     px(g, shoe, 3, 22, 3, 2);
     px(g, shoe, 10, 21, 3, 2);
+  }
+}
+
+// One pair of walk frames per NPC, from its `look` palette. Safe to call repeatedly.
+export function generateNPCTextures(scene, defs) {
+  for (const d of defs) {
+    if (d.kind === 'cat') {
+      for (const f of [0, 1]) {
+        bake(scene, `cat${f}`, 14, 10, (g) => {
+          px(g, 0xe8873a, 2, 3, 9, 5);
+          px(g, 0xe8873a, 9, 1, 4, 4);
+          px(g, 0xe8873a, 9, 0, 1, 2);
+          px(g, 0xe8873a, 12, 0, 1, 2);
+          px(g, 0xf7c97e, 10, 3, 2, 1);
+          px(g, 0x2a2a2a, 11, 2, 1, 1);
+          px(g, 0xe8873a, 0, f ? 1 : 3, 2, 2); // tail
+          px(g, 0xc96a22, 3, 8, 2, 2);
+          px(g, 0xc96a22, f ? 8 : 7, 8, 2, 2);
+        });
+      }
+      continue;
+    }
+    for (const f of [0, 1]) bake(scene, `npc_${d.id}${f}`, 16, 24, (g) => drawPlayer(g, f, { ...PLAYER_LOOK, ...d.look }));
   }
 }
 

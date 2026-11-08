@@ -75,7 +75,7 @@ export default class TitleScene extends Phaser.Scene {
       started = true;
       sfx.click();
       this.cameras.main.fadeOut(350, 27, 31, 59);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('City'));
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('City', { fresh: true }));
     };
     this.input.keyboard.on('keydown-ENTER', start);
     this.input.keyboard.on('keydown-SPACE', start);

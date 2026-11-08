@@ -21,7 +21,7 @@ export default class ResultScene extends Phaser.Scene {
   }
 
   create() {
-    const { actions, steps, state, bonus, score } = this.result;
+    const { actions, steps, state, bonus, score, story } = this.result;
 
     drawSky(this.add.graphics(), 2, HEIGHT);
     const lights = this.add.graphics().setAlpha(0.8);
@@ -88,6 +88,9 @@ export default class ResultScene extends Phaser.Scene {
       },
     });
     txt(this, 522, 364, 'Score is re-computed on-chain', 16, HEX.cream, { bold: false, strokeThickness: 3 });
+    if (story) {
+      txt(this, 522, 386, `Story: ${story.points} pts, ${story.done}/${story.total} steps (not on-chain)`, 16, HEX.energy, { bold: false, strokeThickness: 3 });
+    }
 
     // --- buttons ---
     const button = (x, label, color, onClick) => {
@@ -103,7 +106,7 @@ export default class ResultScene extends Phaser.Scene {
       sfx.click();
       bus.emit('day-reset');
       this.cameras.main.fadeOut(350, 27, 31, 59);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('City'));
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('City', { newDay: true }));
     };
 
     if (busState.chainEnabled) {

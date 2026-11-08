@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test game/rules.test.mjs solana/encoding.test.mjs"
+    "test": "node --test game/rules.test.mjs solana/encoding.test.mjs game/story/quests.test.mjs"
   },
   "dependencies": {
     "@solana/wallet-adapter-base": "^0.9.28",

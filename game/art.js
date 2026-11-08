@@ -1,5 +1,5 @@
 // Scenery drawn with Graphics. Returns handles so scenes can recolor for time of day.
-import { C, WIDTH, HEIGHT, FACADE_Y, STREET_Y, STREET_H, BUILDINGS } from './constants';
+import { C, WIDTH, HEIGHT, FACADE_Y, STREET_Y, STREET_H } from './constants';
 import { txt } from './ui/text';
 
 export const SKY = [
@@ -17,8 +17,10 @@ function rng(seed) {
   };
 }
 
-const SKYLINE = (() => {
-  const r = rng(42);
+const SKYLINES = {};
+function skylineFor(seed) {
+  if (SKYLINES[seed]) return SKYLINES[seed];
+  const r = rng(seed);
   const out = [];
   let x = -10;
   while (x < WIDTH + 20) {
@@ -27,8 +29,9 @@ const SKYLINE = (() => {
     out.push({ x, w, h, spire: r() > 0.85 });
     x += w + 2;
   }
+  SKYLINES[seed] = out;
   return out;
-})();
+}
 
 export function drawSky(g, tod, bottom = FACADE_Y) {
   const s = SKY[tod];
@@ -37,8 +40,9 @@ export function drawSky(g, tod, bottom = FACADE_Y) {
   g.fillRect(0, 0, WIDTH, bottom);
 }
 
-export function drawSkyline(g, tod, baseY = FACADE_Y, lights = null) {
+export function drawSkyline(g, tod, baseY = FACADE_Y, lights = null, seed = 42) {
   const s = SKY[tod];
+  const SKYLINE = skylineFor(seed);
   g.clear();
   g.fillStyle(s.skyline, 1);
   for (const b of SKYLINE) {
@@ -204,21 +208,21 @@ function drawPizza(scene, g, lights, b) {
   g.fillRect(b.doorX - 12, sy + 8, 24, 18);
 }
 
-export function drawBuildings(scene, g, lights) {
-  for (const b of BUILDINGS) {
-    if (b.key === 'apartment') drawApartment(scene, g, lights, b);
-    if (b.key === 'office') drawOffice(scene, g, lights, b);
-    if (b.key === 'pizza') drawPizza(scene, g, lights, b);
-  }
+const DRAWERS = {};
+
+export function drawBuildings(scene, g, lights, list) {
+  for (const b of list) DRAWERS[b.key]?.(scene, g, lights, b);
 }
 
-export function drawStreet(g) {
-  // alleys between buildings
-  g.fillStyle(0x2b2e3a, 1);
-  g.fillRect(280, 150, 110, FACADE_Y - 150);
-  g.fillRect(620, 170, 60, FACADE_Y - 170);
-  g.fillStyle(C.asphalt, 1);
-  g.fillTriangle(305, FACADE_Y, 365, FACADE_Y, 335, 150);
+export function drawStreet(g, { alleys = false, crosswalkX = 304 } = {}) {
+  if (alleys) {
+    // alleys between buildings
+    g.fillStyle(0x2b2e3a, 1);
+    g.fillRect(280, 150, 110, FACADE_Y - 150);
+    g.fillRect(620, 170, 60, FACADE_Y - 170);
+    g.fillStyle(C.asphalt, 1);
+    g.fillTriangle(305, FACADE_Y, 365, FACADE_Y, 335, 150);
+  }
 
   // sidewalk
   g.fillStyle(C.sidewalk, 1);
@@ -238,7 +242,7 @@ export function drawStreet(g) {
   for (let dx = 0; dx < WIDTH; dx += 48) g.fillRect(dx, STREET_Y + STREET_H / 2 - 2, 26, 4);
   // crosswalk
   g.fillStyle(C.white, 0.92);
-  for (let cy = STREET_Y + 6; cy < STREET_Y + STREET_H - 6; cy += 14) g.fillRect(304, cy, 62, 8);
+  for (let cy = STREET_Y + 6; cy < STREET_Y + STREET_H - 6; cy += 14) g.fillRect(crosswalkX, cy, 62, 8);
 
   // far sidewalk + park
   const py = STREET_Y + STREET_H;
@@ -255,3 +259,231 @@ export function drawStreet(g) {
   g.fillRect(0, py + 25, WIDTH, 3); // park fence
   for (let fx = 0; fx < WIDTH; fx += 16) g.fillRect(fx, py + 19, 2, 8);
 }
+
+// ---------- new landmarks ----------
+const STONE = 0xcfc7b3;
+const STONE_SHADE = 0xa59d89;
+
+function stoneWindows(g, lights, r, x, y, w, h) {
+  for (let py = y + 6; py < y + h - 8; py += 12) {
+    for (let px = x + 5; px < x + w - 8; px += 11) {
+      g.fillStyle(0x6d7a8c, 1);
+      g.fillRect(px, py, 6, 8);
+      if (r() > 0.4) {
+        lights.fillStyle(C.windowLit, 1);
+        lights.fillRect(px, py, 6, 8);
+      }
+    }
+  }
+}
+
+function drawEmpireState(scene, g, lights, b) {
+  const { x, y, w, h } = b;
+  const cx = x + w / 2;
+  const r = rng(11);
+  // tiers: [width factor, top offset, bottom offset]
+  const tiers = [
+    [1.0, 178, h], [0.78, 112, 178], [0.58, 68, 112], [0.4, 36, 68], [0.24, 16, 36],
+  ];
+  tiers.forEach(([f, t0, t1], i) => {
+    const tw = w * f;
+    const tx = cx - tw / 2;
+    g.fillStyle(STONE, 1);
+    g.fillRect(tx, y + t0, tw, t1 - t0);
+    g.fillStyle(STONE_SHADE, 1);
+    g.fillRect(tx - 3, y + t0 - 3, tw + 6, 4); // setback ledge
+    g.fillRect(tx, y + t0, 3, t1 - t0);
+    g.fillRect(tx + tw - 3, y + t0, 3, t1 - t0);
+    if (i < 4) stoneWindows(g, lights, r, tx + 2, y + t0 + 2, tw - 4, t1 - t0 - 2);
+  });
+  // vertical piers on the base
+  g.fillStyle(STONE_SHADE, 1);
+  for (let px = x + 12; px < x + w - 6; px += 22) g.fillRect(px, y + 182, 2, h - 182 - 68);
+  // crown fins + mast + beacon
+  g.fillStyle(0xe8e1cf, 1);
+  g.fillRect(cx - 12, y + 6, 24, 12);
+  g.fillStyle(0x6b6552, 1);
+  g.fillRect(cx - 2, y - 2, 4, 14);
+  g.fillStyle(C.awning, 1);
+  g.fillRect(cx - 3, y - 6, 6, 5);
+  lights.fillStyle(0xfff0a8, 1);
+  lights.fillRect(cx - 12, y + 6, 24, 12);
+  lights.fillRect(cx - 14, y + 36, 28, 8);
+  // lobby
+  const lx = b.doorX - 30;
+  g.fillStyle(0x3a3426, 1);
+  g.fillRect(lx - 8, y + h - 66, 76, 66);
+  g.fillStyle(0xc9a54a, 1);
+  g.fillRect(lx - 10, y + h - 72, 80, 8);
+  g.fillStyle(0x15120c, 1);
+  g.fillRect(lx, y + h - 54, 60, 54);
+  g.fillStyle(0xe8c46a, 0.5);
+  g.fillRect(lx + 4, y + h - 50, 52, 46);
+  lights.fillStyle(C.windowLit, 1);
+  lights.fillRect(lx + 4, y + h - 50, 52, 46);
+  txt(scene, b.doorX, y + h - 86, 'EMPIRE STATE', 14, '#c9a54a', { origin: 0.5 }).setDepth(2);
+}
+
+function drawGrandCentral(scene, g, lights, b) {
+  const { x, y, w, h } = b;
+  const cx = x + w / 2;
+  g.fillStyle(0xd8cdb4, 1);
+  g.fillRect(x, y, w, h);
+  g.fillStyle(STONE_SHADE, 1);
+  g.fillRect(x - 6, y - 8, w + 12, 10); // cornice
+  g.fillRect(x, y + h - 10, w, 10);
+  // central sculpture + clock
+  g.fillStyle(0xcdc0a0, 1);
+  g.fillRect(cx - 34, y - 34, 68, 28);
+  g.fillStyle(C.white, 1);
+  g.fillCircle(cx, y - 18, 13);
+  g.lineStyle(2, 0x2b2e3a, 1);
+  g.lineBetween(cx, y - 18, cx, y - 26);
+  g.lineBetween(cx, y - 18, cx + 7, y - 15);
+  g.fillStyle(0x6b6552, 1);
+  g.fillRect(cx - 34, y - 38, 68, 5);
+  // frieze + sign
+  g.fillStyle(0x2b2e3a, 1);
+  g.fillRect(x + 20, y + 10, w - 40, 22);
+  txt(scene, cx, y + 21, 'GRAND CENTRAL', 16, '#f7c948', { origin: 0.5 }).setDepth(2);
+  // three tall arched windows
+  for (let i = 0; i < 3; i++) {
+    const ax = x + 28 + i * 80;
+    g.fillStyle(0x8ecae6, 1);
+    g.fillRect(ax, y + 56, 60, 62);
+    g.fillCircle(ax + 30, y + 56, 30);
+    g.fillStyle(0xffffff, 0.3);
+    g.fillRect(ax + 6, y + 40, 6, 76);
+    g.fillStyle(STONE_SHADE, 1);
+    g.fillRect(ax + 28, y + 28, 3, 90);
+    g.fillRect(ax, y + 84, 60, 3);
+    lights.fillStyle(C.windowLit, 1);
+    lights.fillRect(ax, y + 56, 60, 62);
+    lights.fillCircle(ax + 30, y + 56, 30);
+  }
+  // doorway under the middle arch
+  const dx = b.doorX - 28;
+  g.fillStyle(0x2b2230, 1);
+  g.fillRect(dx, y + h - 54, 56, 54);
+  g.fillStyle(0xe8c46a, 0.5);
+  g.fillRect(dx + 5, y + h - 48, 46, 44);
+  lights.fillStyle(C.windowLit, 1);
+  lights.fillRect(dx + 5, y + h - 48, 46, 44);
+}
+
+function drawMSG(scene, g, lights, b) {
+  const { x, y, w, h } = b;
+  const cx = x + w / 2;
+  // roof cap + drum
+  g.fillStyle(0x23304f, 1);
+  g.fillEllipse(cx, y + 22, w - 20, 44);
+  g.fillStyle(0x2b3a67, 1);
+  g.fillRect(x, y + 22, w, h - 22);
+  g.fillStyle(0xf77f00, 1);
+  for (let by = y + 34; by < y + h - 30; by += 16) g.fillRect(x, by, w, 5);
+  // glowing ring
+  g.fillStyle(0xffd9a0, 0.9);
+  g.fillRect(x, y + 28, w, 3);
+  lights.fillStyle(0xffd9a0, 1);
+  lights.fillRect(x, y + 28, w, 3);
+  lights.fillRect(x, y + 50, w, 4);
+  // marquee
+  g.fillStyle(0x0d0d14, 1);
+  g.fillRect(x + 28, y + 60, w - 56, 24);
+  txt(scene, cx, y + 72, 'MADISON SQUARE GARDEN', 15, '#ff9f1c', { origin: 0.5 }).setDepth(2);
+  lights.fillStyle(0xff9f1c, 0.7);
+  lights.fillRect(x + 28, y + 60, w - 56, 24);
+  // entrance canopy + doors
+  const dx = b.doorX - 40;
+  g.fillStyle(C.awning, 1);
+  g.fillRect(dx - 6, y + h - 52, 92, 10);
+  g.fillStyle(0x10131f, 1);
+  g.fillRect(dx, y + h - 42, 80, 42);
+  g.fillStyle(0x8ecae6, 0.6);
+  g.fillRect(dx + 6, y + h - 38, 30, 38);
+  g.fillRect(dx + 44, y + h - 38, 30, 38);
+  lights.fillStyle(C.windowLit, 1);
+  lights.fillRect(dx + 6, y + h - 38, 68, 38);
+}
+
+function drawTwinTowers(scene, g, lights, b) {
+  const { x, y, w, h } = b;
+  const tw = 130;
+  const towers = [x, x + w - tw];
+  const r = rng(73);
+  const baseTop = y + h - 64;
+  towers.forEach((tx, ti) => {
+    const top = y + (ti === 0 ? 14 : 4);
+    g.fillStyle(0xb7bdc9, 1);
+    g.fillRect(tx, top, tw, baseTop - top);
+    // fine vertical window strips
+    g.fillStyle(0x4a5568, 1);
+    for (let px = tx + 4; px < tx + tw - 3; px += 6) g.fillRect(px, top + 6, 3, baseTop - top - 12);
+    // floor bands
+    g.fillStyle(0x8d94a3, 0.35);
+    for (let by = y + 40; by < baseTop; by += 28) g.fillRect(tx, by, tw, 2);
+    // shaded side
+    g.fillStyle(0x000000, 0.12);
+    g.fillRect(tx + tw - 18, top, 18, baseTop - top);
+    // night lights
+    lights.fillStyle(C.windowLit, 1);
+    for (let wy = y + 24; wy < baseTop - 8; wy += 14) {
+      for (let wx = tx + 6; wx < tx + tw - 8; wx += 12) if (r() > 0.55) lights.fillRect(wx, wy, 4, 5);
+    }
+    // roof
+    g.fillStyle(0x8d94a3, 1);
+    g.fillRect(tx - 2, top - 4, tw + 4, 6);
+  });
+  // antenna on the left tower
+  g.fillStyle(0x6e7686, 1);
+  g.fillRect(towers[0] + tw / 2 - 2, y - 2, 4, 14);
+  // plaza building joining the towers at street level
+  g.fillStyle(0x7d8493, 1);
+  g.fillRect(x - 12, baseTop, w + 24, 64);
+  g.fillStyle(0x636a78, 1);
+  g.fillRect(x - 12, baseTop, w + 24, 5);
+  g.fillStyle(0x20242f, 1);
+  g.fillRect(x + 40, baseTop + 10, w - 80, 20);
+  txt(scene, x + w / 2, baseTop + 20, 'WORLD TRADE CENTER', 16, '#f7c948', { origin: 0.5 }).setDepth(2);
+  const dx = b.doorX - 40;
+  g.fillStyle(0x10131f, 1);
+  g.fillRect(dx, baseTop + 34, 80, 30);
+  g.fillStyle(0x8ecae6, 0.6);
+  g.fillRect(dx + 4, baseTop + 36, 34, 28);
+  g.fillRect(dx + 42, baseTop + 36, 34, 28);
+  lights.fillStyle(C.windowLit, 1);
+  lights.fillRect(dx + 4, baseTop + 36, 72, 28);
+}
+
+// plain background building (not enterable)
+function drawBlock(scene, g, lights, b) {
+  const { x, y, w, h } = b;
+  const r = rng(Math.floor(x) + 5);
+  g.fillStyle(b.color, 1);
+  g.fillRect(x, y, w, h);
+  g.fillStyle(0x000000, 0.15);
+  g.fillRect(x - 4, y - 8, w + 8, 10);
+  for (let wy = y + 14; wy < y + h - 20; wy += 24) {
+    for (let wx = x + 12; wx < x + w - 24; wx += 28) {
+      g.fillStyle(0x8ecae6, 1);
+      g.fillRect(wx, wy, 16, 14);
+      g.fillStyle(0xffffff, 0.3);
+      g.fillRect(wx + 2, wy + 2, 3, 10);
+      if (r() > 0.45) {
+        lights.fillStyle(C.windowLit, 1);
+        lights.fillRect(wx, wy, 16, 14);
+      }
+    }
+  }
+  g.fillStyle(0x10131f, 1);
+  g.fillRect(x + w / 2 - 14, y + h - 30, 28, 30);
+}
+
+DRAWERS.apartment = drawApartment;
+DRAWERS.office = drawOffice;
+DRAWERS.pizza = drawPizza;
+DRAWERS.esb = drawEmpireState;
+DRAWERS.grandcentral = drawGrandCentral;
+DRAWERS.msg = drawMSG;
+DRAWERS.wtc = drawTwinTowers;
+DRAWERS.block = drawBlock;
