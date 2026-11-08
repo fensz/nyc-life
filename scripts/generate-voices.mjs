@@ -4,6 +4,7 @@
 //
 //   node scripts/generate-voices.mjs --dry   count lines and characters, spend nothing
 //   node scripts/generate-voices.mjs         record every missing line (existing files are skipped)
+//   node scripts/generate-voices.mjs --force re-record every line (e.g. after changing the model or a voice)
 //
 // Needs ELEVENLABS_API_KEY in .env.local (gitignored). Re-run after adding new lines.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -29,7 +30,7 @@ const VOICES = {
   pete: 'pqHfZKP75CvOlQylNhV4', // Bill
 };
 const PEOPLE = Object.keys(VOICES).filter((v) => v !== 'narrator');
-const MODEL = 'eleven_flash_v2_5';
+const MODEL = 'eleven_turbo_v2_5'; // Turbo v2.5: higher quality than Flash, same 0.5 credit per character
 
 // ---- the list of lines to record ----
 const wanted = new Map(); // key -> { voice, text }
@@ -67,7 +68,7 @@ let spent = 0;
 for (const { voice, text } of lines) {
   const key = lineKey(voice, text);
   const file = `voice/${voice}/${createHash('sha1').update(key).digest('hex').slice(0, 10)}.mp3`;
-  if (manifest[key] && existsSync(`public/${manifest[key]}`)) continue;
+  if (!process.argv.includes('--force') && manifest[key] && existsSync(`public/${manifest[key]}`)) continue;
   mkdirSync(`public/voice/${voice}`, { recursive: true });
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICES[voice]}?output_format=mp3_22050_32`, {
     method: 'POST',
